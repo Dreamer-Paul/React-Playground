@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
-import { Panel as PanelLogic } from "./panel";
+import { Panel as DragStaticPanel } from "./panel";
 import styles from "./Panel.module.less";
 
 interface PanelProps {
@@ -7,7 +7,7 @@ interface PanelProps {
 }
 
 function Panel({ children }: PanelProps) {
-  const panelRef = useRef<any>(null);
+  const panelRef = useRef<DragStaticPanel>();
   const overlayRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -16,18 +16,18 @@ function Panel({ children }: PanelProps) {
       return;
     }
 
-    panelRef.current = new PanelLogic({
+    panelRef.current = new DragStaticPanel({
       wrapper: wrapperRef.current,
       overlay: overlayRef.current,
     });
 
     return () => {
-      panelRef.current.destroy();
+      panelRef.current?.destroy;
     }
   }, []);
 
   const onToggle = () => {
-    panelRef.current.toggle();
+    panelRef.current?.toggle();
   }
 
   return (

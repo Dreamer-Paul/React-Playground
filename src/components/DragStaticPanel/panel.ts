@@ -51,6 +51,28 @@ export class Panel {
     this.destroyWindowResizeCheck();
   }
 
+  // 修改容器坐标
+  public setPosition = (x: number, y: number) => {
+    const { wrapper } = this.obj;
+
+    if (!wrapper) return;
+
+    this.state.translate.x = x;
+    this.state.translate.y = y;
+
+    wrapper.style.transform = `translate(${x}px, ${y}px)`;
+  }
+
+  // 修改容器大小
+  public setSize = (w: number, h: number) => {
+    const { wrapper } = this.obj;
+
+    if (!wrapper) return;
+
+    wrapper.style.width = `${w}px`;
+    wrapper.style.height = `${h}px`;
+  }
+
   // 静态转拖拽
   public staticToFixed = (offsetProps = {}) => {
     if (!this.obj.wrapper) return;
@@ -72,17 +94,12 @@ export class Panel {
 
     const x = wrapper.offsetLeft + offset.x;
     const y = wrapper.offsetTop + offset.y;
-
-    wrapper.style.transform = `translate(${x}px, ${y}px)`;
-
-    this.state.translate.x = x;
-    this.state.translate.y = y;
+    this.setPosition(x, y);
 
     const w = wrapper.clientWidth + offset.width;
     const h = wrapper.clientHeight + offset.height;
+    this.setSize(w, h);
 
-    wrapper.style.width = `${w}px`;
-    wrapper.style.height = `${h}px`;
     wrapper.style.position = "fixed";
   }
 
@@ -164,10 +181,7 @@ export class Panel {
         y = maxY;
       }
 
-      this.state.translate.x = x;
-      this.state.translate.y = y;
-
-      wrapper.style.transform = `translate(${x}px, ${y}px)`;
+      this.setPosition(x, y);
     });
   }
 
@@ -251,12 +265,8 @@ export class Panel {
       y = window.innerHeight - h;
     }
 
-    wrapper.style.width = `${w}px`;
-    wrapper.style.height = `${h}px`;
-    wrapper.style.transform = `translate(${x}px, ${y}px)`;
-
-    this.state.translate.x = x;
-    this.state.translate.y = y;
+    this.setPosition(x, y);
+    this.setSize(w, h);
   }
 
   // Resize 检测
