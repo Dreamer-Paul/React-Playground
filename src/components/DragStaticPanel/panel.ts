@@ -11,21 +11,27 @@ export const eventName = {
 interface IProps {
   wrapper: HTMLElement
   overlay: HTMLElement
+  resizer?: {
+    el: HTMLElement
+  }
 }
 
 interface IObj {
   wrapper?: HTMLElement
   overlay?: HTMLElement
+  resizer?: HTMLElement
 }
 
 export class Panel {
   private obj: IObj = {
     wrapper: undefined,
-    overlay: undefined
+    overlay: undefined,
+    resizer: undefined,
   }
 
   private state = {
     draggable: false,
+    resizeable: false,
     // 点击位置坐标
     location: {
       x: -1,
@@ -38,16 +44,23 @@ export class Panel {
     }
   }
 
-  constructor({ wrapper, overlay }: IProps) {
+  constructor({ wrapper, overlay, resizer }: IProps) {
     this.obj.wrapper = wrapper;
     this.obj.overlay = overlay;
 
+    if (resizer) {
+      this.obj.resizer = resizer.el;
+      this.state.resizeable = true;
+    }
+
     this.initWrapper();
+    this.initWrapperResize();
     this.initWindowResizeCheck();
   }
 
   public destroy = () => {
     this.destroyWrapper();
+    this.destroyWrapperResize();
     this.destroyWindowResizeCheck();
   }
 
@@ -213,7 +226,7 @@ export class Panel {
       y = ev.clientY;
     }
 
-    // 记录按下前的坐标
+    // 记录按下前鼠标指针相对于容器的坐标
     this.state.location.x = x - this.state.translate.x;
     this.state.location.y = y - this.state.translate.y;
 
@@ -238,7 +251,9 @@ export class Panel {
     wrapper.addEventListener(eventName.down, this.onDown);
   }
 
-  // 节流后的 Window Resize 检测
+  //
+  // 浏览器窗口调整检测
+  //
   private onWindowResizeFrame = () => {
     if (!this.obj.wrapper || !this.state.draggable) return;
 
@@ -269,17 +284,81 @@ export class Panel {
     this.setSize(w, h);
   }
 
-  // Resize 检测
-  private onWindowResize() {
+  private onWindowResize = () => {
     window.requestAnimationFrame(this.onWindowResizeFrame);
   }
-  private onWindowResizeBinded = this.onWindowResize.bind(this);
 
-  private initWindowResizeCheck() {
-    window.addEventListener("resize", this.onWindowResizeBinded);
+  private initWindowResizeCheck = () => {
+    window.addEventListener("resize", this.onWindowResize);
   }
 
-  private destroyWindowResizeCheck() {
-    window.removeEventListener("resize", this.onWindowResizeBinded);
+  private destroyWindowResizeCheck = () => {
+    window.removeEventListener("resize", this.onWindowResize);
+  }
+
+  //
+  // 拖拽功能（暂时只有右下角）
+  //
+  private onWrapperResizeMove = (e: unknown) => {
+    const ev = e as TouchEvent<HTMLElement> | MouseEvent<HTMLElement>;
+
+    window.requestAnimationFrame(() => {
+      let x = 0;
+      let y = 0;
+  
+      if ("touches" in ev) {
+        x = ev.touches[0].clientX;
+        y = ev.touches[0].clientY;
+      }
+      else {
+        x = ev.clientX;
+        y = ev.clientY;
+      }
+
+      const w = x - this.state.translate.x;
+      const h = y - this.state.translate.y;
+  
+      this.setSize(w, h);
+    });
+  }
+
+  private onWrapperResizeUp = () => {
+    document.removeEventListener(eventName.up, this.onWrapperResizeUp);
+    document.removeEventListener(eventName.move, this.onWrapperResizeMove);
+  }
+
+  private onWrapperResizeDown = (e: unknown) => {
+    const ev = e as TouchEvent<HTMLElement> | MouseEvent<HTMLElement>;
+
+    if (!this.state.draggable) {
+      return;
+    }
+
+    ev.preventDefault();
+
+    document.addEventListener(eventName.up, this.onWrapperResizeUp);
+    document.addEventListener(eventName.move, this.onWrapperResizeMove);
+  }
+
+  private initWrapperResize = () => {
+    const { resizer } = this.obj;
+
+    if (!resizer || !this.state.resizeable) {
+      return;
+    }
+
+    resizer.innerHTML = `<span class="resizer-br"></span>`;
+
+    resizer.addEventListener(eventName.down, this.onWrapperResizeDown);
+  }
+
+  private destroyWrapperResize = () => {
+    const { resizer } = this.obj;
+
+    if (!resizer || !this.state.resizeable) {
+      return;
+    }
+
+    resizer.removeEventListener(eventName.down, this.onWrapperResizeDown);
   }
 }

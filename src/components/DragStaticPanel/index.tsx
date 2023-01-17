@@ -10,15 +10,19 @@ function Panel({ children }: PanelProps) {
   const panelRef = useRef<DragStaticPanel>();
   const overlayRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const resizerRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    if (!wrapperRef.current || !overlayRef.current) {
+    if (!wrapperRef.current || !overlayRef.current || !resizerRef.current) {
       return;
     }
 
     panelRef.current = new DragStaticPanel({
       wrapper: wrapperRef.current,
       overlay: overlayRef.current,
+      resizer: {
+        el: resizerRef.current,
+      }
     });
 
     return () => {
@@ -34,8 +38,13 @@ function Panel({ children }: PanelProps) {
     <div>
       <div ref={overlayRef} className={styles.overlay}></div>
       <div ref={wrapperRef} className={styles.panel}>
-        <button onClick={onToggle}>Toggle</button>
-        {children}
+        <div ref={resizerRef} className={styles.resizer}></div>
+        <div className={styles.header}>
+          <button onClick={onToggle}>Toggle</button>
+        </div>
+        <div className={styles.body}>
+          {children}
+        </div>
       </div>
     </div>
   )
