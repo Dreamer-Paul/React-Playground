@@ -37,10 +37,15 @@ export class Panel {
       x: -1,
       y: -1
     },
-    // 容器坐标
+    // 记录容器坐标
     translate: {
       x: -1,
       y: -1
+    },
+    // 记录调整的大小
+    size: {
+      width: -1,
+      height: -1
     }
   }
 
@@ -53,13 +58,13 @@ export class Panel {
       this.state.resizeable = true;
     }
 
-    this.initWrapper();
+    this.wrapperMove.init();
     this.wrapperResize.init();
     this.windowResizeCheck.init();
   }
 
   public destroy = () => {
-    this.destroyWrapper();
+    this.wrapperMove.init();
     this.wrapperResize.destroy();
     this.windowResizeCheck.destroy();
   }
@@ -82,6 +87,9 @@ export class Panel {
 
     if (!wrapper) return;
 
+    this.state.size.width = w;
+    this.state.size.height = h;
+
     wrapper.style.width = `${w}px`;
     wrapper.style.height = `${h}px`;
   }
@@ -101,13 +109,33 @@ export class Panel {
     };
 
     const { wrapper } = this.obj;
+    const { size, translate } = this.state;
 
-    const w = wrapper.clientWidth + offset.width;
-    const h = wrapper.clientHeight + offset.height;
+    let w;
+    let h;
+
+    if (usingPrevPosition && (size.width > -1 || size.width > -1)) {
+      w = size.width;
+      h = size.height;
+    }
+    else {
+      w = wrapper.clientWidth + offset.width;
+      h = wrapper.clientHeight + offset.height;
+    }
     this.setSize(w, h);
 
-    const x = wrapper.offsetLeft + offset.x;
-    const y = wrapper.offsetTop + offset.y;
+    let x;
+    let y;
+
+    // 使用上一次是 Fixed 状态下的坐标
+    if (usingPrevPosition && (translate.x > -1 || translate.y > -1)) {
+      x = translate.x;
+      y = translate.y;
+    }
+    else {
+      x = wrapper.offsetLeft + offset.x;
+      y = wrapper.offsetTop + offset.y;
+    }
     this.setPosition(x, y);
 
     wrapper.classList.add("draggable");
@@ -140,34 +168,70 @@ export class Panel {
       this.fixedToStatic();
     }
     else {
-      this.staticToFixed(offsetProps);
+      this.staticToFixed(offsetProps, true);
     }
   }
 
-  private onUp = () => {
-    const { wrapper, overlay } = this.obj;
+  // 绑定 Wrapper 操作
+  private wrapperMove = {
+    /**
+     * 初始化容器缩放功能
+     */
+    init: () => {
+      const { wrapper, overlay } = this.obj;
 
-    if (!wrapper || !overlay) return;
-
-    wrapper.style.userSelect = "";
-    overlay.classList.remove("active");
-
-    document.removeEventListener(eventName.move, this.onMove);
-    document.removeEventListener(eventName.up, this.onUp);
-  }
-
-  private onMove = (e: unknown) => {
-    const ev = e as TouchEvent<HTMLElement> | MouseEvent<HTMLElement>;
-
-    const { wrapper } = this.obj;
-
-    if (!wrapper) return;
-
-    window.requestAnimationFrame(() => {
-      // 移动的时候拿到的坐标是鼠标的（较大）减去按下前鼠标距离元素 xy 的距离
+      if (!wrapper || !overlay) return;
+  
+      wrapper.addEventListener(eventName.down, this.wrapperMove.onDown);
+    },
+    /**
+     * 销毁容器拖拽功能
+     */
+    destroy: () => {
+      const { wrapper, overlay } = this.obj;
+  
+      if (!wrapper || !overlay) return;
+  
+      wrapper.addEventListener(eventName.down, this.wrapperMove.onDown);
+    },
+    /**
+     * 鼠标弹起
+     * @description 释放事件
+     */
+    onUp: () => {
+      const { wrapper, overlay } = this.obj;
+  
+      if (!wrapper || !overlay) return;
+  
+      wrapper.style.userSelect = "";
+      overlay.classList.remove("active");
+  
+      document.removeEventListener(eventName.move, this.wrapperMove.onMove);
+      document.removeEventListener(eventName.up, this.wrapperMove.onUp);
+    },
+    /**
+     * 鼠标按下
+     * @description 记录按下的位置
+     */
+    onDown: (e: unknown) => {
+      const ev = e as TouchEvent<HTMLElement> | MouseEvent<HTMLElement>;
+  
+      const { wrapper, overlay } = this.obj;
+  
+      if (!wrapper || !overlay) return;
+  
+      if (!this.state.draggable) return;
+  
+      if (ev.target !== wrapper) return;
+  
+      ev.preventDefault();
+  
+      wrapper.style.userSelect = "none";
+      overlay.classList.add("active");
+  
       let x = 0;
       let y = 0;
-
+  
       if ("touches" in ev) {
         x = ev.touches[0].clientX;
         y = ev.touches[0].clientY;
@@ -176,82 +240,62 @@ export class Panel {
         x = ev.clientX;
         y = ev.clientY;
       }
-
-      x = x - this.state.location.x;
-      y = y - this.state.location.y;
-
-      if (x <= 0) {
-        x = 0;
-      }
-      if (y <= 0) {
-        y = 0;
-      }
-
-      const maxX = window.innerWidth - wrapper.clientWidth;
-      const maxY = window.innerHeight - wrapper.clientHeight;
-
-      if (x >= maxX) {
-        x = maxX;
-      }
-      if (y >= maxY) {
-        y = maxY;
-      }
-
-      this.setPosition(x, y);
-    });
-  }
-
-  private onDown = (e: unknown) => {
-    const ev = e as TouchEvent<HTMLElement> | MouseEvent<HTMLElement>;
-
-    const { wrapper, overlay } = this.obj;
-
-    if (!wrapper || !overlay) return;
-
-    if (!this.state.draggable) return;
-
-    if (ev.target !== wrapper) return;
-
-    ev.preventDefault();
-
-    wrapper.style.userSelect = "none";
-    overlay.classList.add("active");
-
-    let x = 0;
-    let y = 0;
-
-    if ("touches" in ev) {
-      x = ev.touches[0].clientX;
-      y = ev.touches[0].clientY;
+  
+      // 记录按下前鼠标指针相对于容器的坐标
+      this.state.location.x = x - this.state.translate.x;
+      this.state.location.y = y - this.state.translate.y;
+  
+      document.addEventListener(eventName.move, this.wrapperMove.onMove);
+      document.addEventListener(eventName.up, this.wrapperMove.onUp);
+    },
+    /**
+     * 鼠标移动
+     * @description 绑定事件
+     */
+    onMove: (e: unknown) => {
+      const ev = e as TouchEvent<HTMLElement> | MouseEvent<HTMLElement>;
+  
+      const { wrapper } = this.obj;
+  
+      if (!wrapper) return;
+  
+      window.requestAnimationFrame(() => {
+        // 移动的时候拿到的坐标是鼠标的（较大）减去按下前鼠标距离元素 xy 的距离
+        let x = 0;
+        let y = 0;
+  
+        if ("touches" in ev) {
+          x = ev.touches[0].clientX;
+          y = ev.touches[0].clientY;
+        }
+        else {
+          x = ev.clientX;
+          y = ev.clientY;
+        }
+  
+        x = x - this.state.location.x;
+        y = y - this.state.location.y;
+  
+        if (x <= 0) {
+          x = 0;
+        }
+        if (y <= 0) {
+          y = 0;
+        }
+  
+        const maxX = window.innerWidth - wrapper.clientWidth;
+        const maxY = window.innerHeight - wrapper.clientHeight;
+  
+        if (x >= maxX) {
+          x = maxX;
+        }
+        if (y >= maxY) {
+          y = maxY;
+        }
+  
+        this.setPosition(x, y);
+      });
     }
-    else {
-      x = ev.clientX;
-      y = ev.clientY;
-    }
-
-    // 记录按下前鼠标指针相对于容器的坐标
-    this.state.location.x = x - this.state.translate.x;
-    this.state.location.y = y - this.state.translate.y;
-
-    document.addEventListener(eventName.move, this.onMove);
-    document.addEventListener(eventName.up, this.onUp);
-  }
-
-  // 绑定 Wrapper 操作
-  private initWrapper = () => {
-    const { wrapper, overlay } = this.obj;
-
-    if (!wrapper || !overlay) return;
-
-    wrapper.addEventListener(eventName.down, this.onDown);
-  }
-
-  private destroyWrapper = () => {
-    const { wrapper, overlay } = this.obj;
-
-    if (!wrapper || !overlay) return;
-
-    wrapper.addEventListener(eventName.down, this.onDown);
   }
 
   //

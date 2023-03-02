@@ -26,7 +26,7 @@ function Panel({ children }: PanelProps) {
     });
 
     return () => {
-      panelRef.current?.destroy;
+      panelRef.current?.destroy();
     }
   }, []);
 
