@@ -95,7 +95,7 @@ export class Panel {
   }
 
   // 静态转拖拽
-  public staticToFixed = (offsetProps = {}, usingPrevPosition: boolean = false) => {
+  public staticToFixed = (offsetProps = {}, usingPrevSets: boolean = false) => {
     if (!this.obj.wrapper) return;
 
     this.state.draggable = true;
@@ -111,32 +111,19 @@ export class Panel {
     const { wrapper } = this.obj;
     const { size, translate } = this.state;
 
-    let w;
-    let h;
-
-    if (usingPrevPosition && (size.width > -1 || size.width > -1)) {
-      w = size.width;
-      h = size.height;
+    // 如果需要还原成之前的坐标和位置
+    if (usingPrevSets && (size.width > -1 || size.width > -1) && (translate.x > -1 || translate.y > -1)) {
+      this.fixPositionAndSize();
     }
     else {
-      w = wrapper.clientWidth + offset.width;
-      h = wrapper.clientHeight + offset.height;
+      const w = wrapper.clientWidth + offset.width;
+      const h = wrapper.clientHeight + offset.height;
+      this.setSize(w, h);
+  
+      const x = wrapper.offsetLeft + offset.x;
+      const y = wrapper.offsetTop + offset.y;
+      this.setPosition(x, y);
     }
-    this.setSize(w, h);
-
-    let x;
-    let y;
-
-    // 使用上一次是 Fixed 状态下的坐标
-    if (usingPrevPosition && (translate.x > -1 || translate.y > -1)) {
-      x = translate.x;
-      y = translate.y;
-    }
-    else {
-      x = wrapper.offsetLeft + offset.x;
-      y = wrapper.offsetTop + offset.y;
-    }
-    this.setPosition(x, y);
 
     wrapper.classList.add("draggable");
 
@@ -163,16 +150,48 @@ export class Panel {
     wrapper.style.transform = "";
   }
 
-  public toggle = (offsetProps = {}) => {
+  // 自动切换
+  public toggle = (offsetProps = {}, usingPrevSets?: boolean) => {
     if (this.state.draggable) {
       this.fixedToStatic();
     }
     else {
-      this.staticToFixed(offsetProps, true);
+      this.staticToFixed(offsetProps, usingPrevSets);
     }
   }
 
+  // 窗口尺寸可能变化的情况下，重新计算坐标和尺寸
+  private fixPositionAndSize = () => {
+    const { size, translate } = this.state;
+ 
+    let x = translate.x;
+    let y = translate.y;
+    let w = size.width;
+    let h = size.height;
+
+    if (w >= window.innerWidth) {
+      w = window.innerWidth;
+    }
+
+    if (h >= window.innerHeight) {
+      h = window.innerHeight;
+    }
+
+    if ((x + w) >= window.innerWidth) {
+      x = window.innerWidth - w;
+    }
+
+    if ((y + h) >= window.innerHeight) {
+      y = window.innerHeight - h;
+    }
+
+    this.setPosition(x, y);
+    this.setSize(w, h);
+  }
+
+  //
   // 绑定 Wrapper 操作
+  //
   private wrapperMove = {
     /**
      * 初始化容器缩放功能
@@ -305,31 +324,7 @@ export class Panel {
     onResizeFrame: () => {
       if (!this.obj.wrapper || !this.state.draggable) return;
 
-      const { wrapper } = this.obj;
-  
-      let x = this.state.translate.x;
-      let y = this.state.translate.y;
-      let w = wrapper.clientWidth;
-      let h = wrapper.clientHeight;
-  
-      if (w >= window.innerWidth) {
-        w = window.innerWidth;
-      }
-  
-      if (h >= window.innerHeight) {
-        h = window.innerHeight;
-      }
-  
-      if ((x + w) >= window.innerWidth) {
-        x = window.innerWidth - w;
-      }
-  
-      if ((y + h) >= window.innerHeight) {
-        y = window.innerHeight - h;
-      }
-  
-      this.setPosition(x, y);
-      this.setSize(w, h);
+      this.fixPositionAndSize();
     },
     onResize: () => {
       window.requestAnimationFrame(this.windowResizeCheck.onResizeFrame);

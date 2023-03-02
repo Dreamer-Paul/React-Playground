@@ -31,7 +31,7 @@ function Panel({ children }: PanelProps) {
   }, []);
 
   const onToggle = () => {
-    panelRef.current?.toggle();
+    panelRef.current?.toggle({}, true);
   }
 
   return (
