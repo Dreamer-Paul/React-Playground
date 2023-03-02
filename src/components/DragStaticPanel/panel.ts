@@ -410,9 +410,21 @@ export class Panel {
           x = ev.clientX;
           y = ev.clientY;
         }
+
+        const { translate } = this.state;
   
-        const w = x - this.state.translate.x;
-        const h = y - this.state.translate.y;
+        let w = x - translate.x;
+        let h = y - translate.y;
+
+        const maxW = window.innerWidth - translate.x;
+        const maxH = window.innerHeight - translate.y;
+  
+        if (w >= maxW) {
+          w = maxW;
+        }
+        if (h >= maxH) {
+          h = maxH;
+        }
     
         this.setSize(w, h);
       });
