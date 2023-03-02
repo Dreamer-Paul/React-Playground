@@ -54,14 +54,14 @@ export class Panel {
     }
 
     this.initWrapper();
-    this.initWrapperResize();
-    this.initWindowResizeCheck();
+    this.wrapperResize.init();
+    this.windowResizeCheck.init();
   }
 
   public destroy = () => {
     this.destroyWrapper();
-    this.destroyWrapperResize();
-    this.destroyWindowResizeCheck();
+    this.wrapperResize.destroy();
+    this.windowResizeCheck.destroy();
   }
 
   // 修改容器坐标
@@ -87,7 +87,7 @@ export class Panel {
   }
 
   // 静态转拖拽
-  public staticToFixed = (offsetProps = {}) => {
+  public staticToFixed = (offsetProps = {}, usingPrevPosition: boolean = false) => {
     if (!this.obj.wrapper) return;
 
     this.state.draggable = true;
@@ -102,17 +102,18 @@ export class Panel {
 
     const { wrapper } = this.obj;
 
-    wrapper.style.top = "0";
-    wrapper.style.left = "0";
+    const w = wrapper.clientWidth + offset.width;
+    const h = wrapper.clientHeight + offset.height;
+    this.setSize(w, h);
 
     const x = wrapper.offsetLeft + offset.x;
     const y = wrapper.offsetTop + offset.y;
     this.setPosition(x, y);
 
-    const w = wrapper.clientWidth + offset.width;
-    const h = wrapper.clientHeight + offset.height;
-    this.setSize(w, h);
+    wrapper.classList.add("draggable");
 
+    wrapper.style.top = "0";
+    wrapper.style.left = "0";
     wrapper.style.position = "fixed";
   }
 
@@ -123,6 +124,8 @@ export class Panel {
     this.state.draggable = false;
 
     const { wrapper } = this.obj;
+
+    wrapper.classList.remove("draggable");
 
     wrapper.style.top = "";
     wrapper.style.left = "";
@@ -254,111 +257,126 @@ export class Panel {
   //
   // 浏览器窗口调整检测
   //
-  private onWindowResizeFrame = () => {
-    if (!this.obj.wrapper || !this.state.draggable) return;
+  private windowResizeCheck = {
+    onResizeFrame: () => {
+      if (!this.obj.wrapper || !this.state.draggable) return;
 
-    const { wrapper } = this.obj;
-
-    let x = this.state.translate.x;
-    let y = this.state.translate.y;
-    let w = wrapper.clientWidth;
-    let h = wrapper.clientHeight;
-
-    if (w >= window.innerWidth) {
-      w = window.innerWidth;
-    }
-
-    if (h >= window.innerHeight) {
-      h = window.innerHeight;
-    }
-
-    if ((x + w) >= window.innerWidth) {
-      x = window.innerWidth - w;
-    }
-
-    if ((y + h) >= window.innerHeight) {
-      y = window.innerHeight - h;
-    }
-
-    this.setPosition(x, y);
-    this.setSize(w, h);
-  }
-
-  private onWindowResize = () => {
-    window.requestAnimationFrame(this.onWindowResizeFrame);
-  }
-
-  private initWindowResizeCheck = () => {
-    window.addEventListener("resize", this.onWindowResize);
-  }
-
-  private destroyWindowResizeCheck = () => {
-    window.removeEventListener("resize", this.onWindowResize);
+      const { wrapper } = this.obj;
+  
+      let x = this.state.translate.x;
+      let y = this.state.translate.y;
+      let w = wrapper.clientWidth;
+      let h = wrapper.clientHeight;
+  
+      if (w >= window.innerWidth) {
+        w = window.innerWidth;
+      }
+  
+      if (h >= window.innerHeight) {
+        h = window.innerHeight;
+      }
+  
+      if ((x + w) >= window.innerWidth) {
+        x = window.innerWidth - w;
+      }
+  
+      if ((y + h) >= window.innerHeight) {
+        y = window.innerHeight - h;
+      }
+  
+      this.setPosition(x, y);
+      this.setSize(w, h);
+    },
+    onResize: () => {
+      window.requestAnimationFrame(this.windowResizeCheck.onResizeFrame);
+    },
+    init: () => {
+      window.addEventListener("resize", this.windowResizeCheck.onResize);
+    },
+    destroy: () => {
+      window.removeEventListener("resize", this.windowResizeCheck.onResize);
+    },
   }
 
   //
   // 拖拽功能（暂时只有右下角）
   //
-  private onWrapperResizeMove = (e: unknown) => {
-    const ev = e as TouchEvent<HTMLElement> | MouseEvent<HTMLElement>;
+  private wrapperResize = {
+    /**
+     * 初始化缩放功能
+     */
+    init: () => {
+      const { resizer } = this.obj;
 
-    window.requestAnimationFrame(() => {
-      let x = 0;
-      let y = 0;
-  
-      if ("touches" in ev) {
-        x = ev.touches[0].clientX;
-        y = ev.touches[0].clientY;
+      if (!resizer || !this.state.resizeable) {
+        return;
       }
-      else {
-        x = ev.clientX;
-        y = ev.clientY;
-      }
-
-      const w = x - this.state.translate.x;
-      const h = y - this.state.translate.y;
   
-      this.setSize(w, h);
-    });
-  }
+      resizer.innerHTML = `<span class="resizer-br"></span>`;
+  
+      resizer.addEventListener(eventName.down, this.wrapperResize.onDown);
+    },
+    /**
+     * 销毁缩放功能
+     */
+    destroy: () => {
+      const { resizer } = this.obj;
 
-  private onWrapperResizeUp = () => {
-    document.removeEventListener(eventName.up, this.onWrapperResizeUp);
-    document.removeEventListener(eventName.move, this.onWrapperResizeMove);
-  }
+      if (!resizer || !this.state.resizeable) {
+        return;
+      }
+  
+      resizer.removeEventListener(eventName.down, this.wrapperResize.onDown);
+    },
+    /**
+     * 鼠标弹起
+     * @description 释放事件
+     */
+    onUp: () => {
+      document.removeEventListener(eventName.up, this.wrapperResize.onUp);
+      document.removeEventListener(eventName.move, this.wrapperResize.onMove);
+    },
+    /**
+     * 鼠标按下
+     * @description 记录按下的位置
+     */
+    onDown: (e: unknown) => {
+      const ev = e as TouchEvent<HTMLElement> | MouseEvent<HTMLElement>;
 
-  private onWrapperResizeDown = (e: unknown) => {
-    const ev = e as TouchEvent<HTMLElement> | MouseEvent<HTMLElement>;
+      if (!this.state.draggable) {
+        return;
+      }
+  
+      ev.preventDefault();
+  
+      document.addEventListener(eventName.up, this.wrapperResize.onUp);
+      document.addEventListener(eventName.move, this.wrapperResize.onMove);
+    },
+    /**
+     * 鼠标移动
+     * @description 绑定事件
+     */
+    onMove: (e: unknown) => {
+      const ev = e as TouchEvent<HTMLElement> | MouseEvent<HTMLElement>;
 
-    if (!this.state.draggable) {
-      return;
+      window.requestAnimationFrame(() => {
+        let x = 0;
+        let y = 0;
+    
+        if ("touches" in ev) {
+          x = ev.touches[0].clientX;
+          y = ev.touches[0].clientY;
+        }
+        else {
+          x = ev.clientX;
+          y = ev.clientY;
+        }
+  
+        const w = x - this.state.translate.x;
+        const h = y - this.state.translate.y;
+    
+        this.setSize(w, h);
+      });
     }
-
-    ev.preventDefault();
-
-    document.addEventListener(eventName.up, this.onWrapperResizeUp);
-    document.addEventListener(eventName.move, this.onWrapperResizeMove);
-  }
-
-  private initWrapperResize = () => {
-    const { resizer } = this.obj;
-
-    if (!resizer || !this.state.resizeable) {
-      return;
-    }
-
-    resizer.innerHTML = `<span class="resizer-br"></span>`;
-
-    resizer.addEventListener(eventName.down, this.onWrapperResizeDown);
-  }
-
-  private destroyWrapperResize = () => {
-    const { resizer } = this.obj;
-
-    if (!resizer || !this.state.resizeable) {
-      return;
-    }
-
-    resizer.removeEventListener(eventName.down, this.onWrapperResizeDown);
   }
 }

@@ -19,28 +19,25 @@
   z-index: 1;
   padding: 1em;
   padding-top: 3em;
-  overflow: hidden;
   position: relative;
   border-radius: 1em;
   box-sizing: border-box;
   background-color: #444;
 
   .resizer {
-    // display: none;
-
-    &.active {
-      display: block;
-    }
-
     :global .resizer-br {
-      right: 0;
-      bottom: 0;
+      right: -.5em;
+      bottom: -.5em;
       width: 1.5em;
       height: 1.5em;
       position: absolute;
       cursor: nwse-resize;
       background-color: rgba(0, 0, 0, .5);
     }
+  }
+
+  &:not(:global .draggable) .resizer {
+    display: none;
   }
 
   .header {

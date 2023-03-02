@@ -3,7 +3,7 @@ import { Panel as DragStaticPanel } from "./panel";
 import styles from "./Panel.module.less";
 
 interface PanelProps {
-  children: React.ReactElement;
+  children: React.ReactNode;
 }
 
 function Panel({ children }: PanelProps) {
