@@ -82,16 +82,20 @@ export class Panel {
   }
 
   // 修改容器大小
-  public setSize = (w: number, h: number) => {
+  public setSize = (w: number | undefined, h: number | undefined) => {
     const { wrapper } = this.obj;
 
     if (!wrapper) return;
 
-    this.state.size.width = w;
-    this.state.size.height = h;
+    if (w) {
+      this.state.size.width = w;
+      wrapper.style.width = `${w}px`;
+    }
 
-    wrapper.style.width = `${w}px`;
-    wrapper.style.height = `${h}px`;
+    if (h) {
+      this.state.size.height = h;
+      wrapper.style.height = `${h}px`;
+    }
   }
 
   // 静态转拖拽
@@ -119,7 +123,7 @@ export class Panel {
       const w = wrapper.clientWidth + offset.width;
       const h = wrapper.clientHeight + offset.height;
       this.setSize(w, h);
-  
+
       const x = wrapper.offsetLeft + offset.x;
       const y = wrapper.offsetTop + offset.y;
       this.setPosition(x, y);
@@ -163,7 +167,7 @@ export class Panel {
   // 窗口尺寸可能变化的情况下，重新计算坐标和尺寸
   private fixPositionAndSize = () => {
     const { size, translate } = this.state;
- 
+
     let x = translate.x;
     let y = translate.y;
     let w = size.width;
@@ -189,6 +193,27 @@ export class Panel {
     this.setSize(w, h);
   }
 
+  /**
+   * 获取当前指针位置
+   * @param ev 触摸或鼠标事件
+   * @returns 
+   */
+  private getPointerPosition = (ev: TouchEvent<HTMLElement> | MouseEvent<HTMLElement>) => {
+    let x = 0;
+    let y = 0;
+
+    if ("touches" in ev) {
+      x = ev.touches[0].clientX;
+      y = ev.touches[0].clientY;
+    }
+    else {
+      x = ev.clientX;
+      y = ev.clientY;
+    }
+
+    return [x, y];
+  }
+
   //
   // 绑定 Wrapper 操作
   //
@@ -200,7 +225,7 @@ export class Panel {
       const { wrapper, overlay } = this.obj;
 
       if (!wrapper || !overlay) return;
-  
+
       wrapper.addEventListener(eventName.down, this.wrapperMove.onDown);
     },
     /**
@@ -208,9 +233,9 @@ export class Panel {
      */
     destroy: () => {
       const { wrapper, overlay } = this.obj;
-  
+
       if (!wrapper || !overlay) return;
-  
+
       wrapper.addEventListener(eventName.down, this.wrapperMove.onDown);
     },
     /**
@@ -219,12 +244,12 @@ export class Panel {
      */
     onUp: () => {
       const { wrapper, overlay } = this.obj;
-  
+
       if (!wrapper || !overlay) return;
-  
+
       wrapper.style.userSelect = "";
       overlay.classList.remove("active");
-  
+
       document.removeEventListener(eventName.move, this.wrapperMove.onMove);
       document.removeEventListener(eventName.up, this.wrapperMove.onUp);
     },
@@ -234,36 +259,26 @@ export class Panel {
      */
     onDown: (e: unknown) => {
       const ev = e as TouchEvent<HTMLElement> | MouseEvent<HTMLElement>;
-  
+
       const { wrapper, overlay } = this.obj;
-  
+
       if (!wrapper || !overlay) return;
-  
+
       if (!this.state.draggable) return;
-  
+
       if (ev.target !== wrapper) return;
-  
+
       ev.preventDefault();
-  
+
       wrapper.style.userSelect = "none";
       overlay.classList.add("active");
-  
-      let x = 0;
-      let y = 0;
-  
-      if ("touches" in ev) {
-        x = ev.touches[0].clientX;
-        y = ev.touches[0].clientY;
-      }
-      else {
-        x = ev.clientX;
-        y = ev.clientY;
-      }
-  
-      // 记录按下前鼠标指针相对于容器的坐标
+
+      const [x, y] = this.getPointerPosition(ev);
+
+      // 记录按下前鼠标的位置（减去容器坐标）
       this.state.location.x = x - this.state.translate.x;
       this.state.location.y = y - this.state.translate.y;
-  
+
       document.addEventListener(eventName.move, this.wrapperMove.onMove);
       document.addEventListener(eventName.up, this.wrapperMove.onUp);
     },
@@ -273,45 +288,35 @@ export class Panel {
      */
     onMove: (e: unknown) => {
       const ev = e as TouchEvent<HTMLElement> | MouseEvent<HTMLElement>;
-  
+
       const { wrapper } = this.obj;
-  
+
       if (!wrapper) return;
-  
+
       window.requestAnimationFrame(() => {
         // 移动的时候拿到的坐标是鼠标的（较大）减去按下前鼠标距离元素 xy 的距离
-        let x = 0;
-        let y = 0;
-  
-        if ("touches" in ev) {
-          x = ev.touches[0].clientX;
-          y = ev.touches[0].clientY;
-        }
-        else {
-          x = ev.clientX;
-          y = ev.clientY;
-        }
-  
+        let [x, y] = this.getPointerPosition(ev);
+
         x = x - this.state.location.x;
         y = y - this.state.location.y;
-  
+
         if (x <= 0) {
           x = 0;
         }
         if (y <= 0) {
           y = 0;
         }
-  
+
         const maxX = window.innerWidth - wrapper.clientWidth;
         const maxY = window.innerHeight - wrapper.clientHeight;
-  
+
         if (x >= maxX) {
           x = maxX;
         }
         if (y >= maxY) {
           y = maxY;
         }
-  
+
         this.setPosition(x, y);
       });
     }
@@ -341,6 +346,38 @@ export class Panel {
   // 拖拽功能（暂时只有右下角）
   //
   private wrapperResize = {
+    size: {
+      height: 0,
+      width: 0,
+    },
+    position: {
+      x: -1,
+      y: -1,
+    },
+    pointer: {
+      x: -1,
+      y: -1,
+    },
+    direction: '',
+    getDirection: (className: string) => {
+      if (className.includes("-br")) {
+        return "bottom-right";
+      }
+      if (className.includes("-t")) {
+        return "top";
+      }
+      if (className.includes("-l")) {
+        return "left";
+      }
+      if (className.includes("-r")) {
+        return "right";
+      }
+      if (className.includes("-b")) {
+        return "bottom";
+      }
+
+      return '';
+    },
     /**
      * 初始化缩放功能
      */
@@ -350,9 +387,14 @@ export class Panel {
       if (!resizer || !this.state.resizeable) {
         return;
       }
-  
-      resizer.innerHTML = `<span class="resizer-br"></span>`;
-  
+
+      resizer.innerHTML = `<span class="resizer-vertical resizer-t"></span>
+        <span class="resizer-horizontal resizer-l"></span>
+        <span class="resizer-vertical resizer-b"></span>
+        <span class="resizer-horizontal resizer-r"></span>
+        <span class="resizer-corner resizer-br"></span>
+      `;
+
       resizer.addEventListener(eventName.down, this.wrapperResize.onDown);
     },
     /**
@@ -364,7 +406,7 @@ export class Panel {
       if (!resizer || !this.state.resizeable) {
         return;
       }
-  
+
       resizer.removeEventListener(eventName.down, this.wrapperResize.onDown);
     },
     /**
@@ -382,12 +424,36 @@ export class Panel {
     onDown: (e: unknown) => {
       const ev = e as TouchEvent<HTMLElement> | MouseEvent<HTMLElement>;
 
-      if (!this.state.draggable) {
+      if (!this.obj.wrapper) {
         return;
       }
-  
+
+      // 拖拽模式使用拖拽的高度
+      if (this.state.draggable) {
+        this.wrapperResize.size.height = this.state.size.height;
+        this.wrapperResize.size.width = this.state.size.width;
+
+        this.wrapperResize.position.x = this.state.translate.x;
+        this.wrapperResize.position.y = this.state.translate.y;
+      }
+      // 获取实时高度
+      else {
+        this.wrapperResize.size.height = this.obj.wrapper.offsetHeight;
+        this.wrapperResize.size.width = this.obj.wrapper.offsetWidth;
+      }
+
+      // 记录操作位置
+      const target = ev.target as HTMLElement;
+      this.wrapperResize.direction = this.wrapperResize.getDirection(target.className);
+
+      // 记录按下前鼠标指针的位置
+      let [x, y] = this.getPointerPosition(ev);
+
+      this.wrapperResize.pointer.x = x;
+      this.wrapperResize.pointer.y = y;
+
       ev.preventDefault();
-  
+
       document.addEventListener(eventName.up, this.wrapperResize.onUp);
       document.addEventListener(eventName.move, this.wrapperResize.onMove);
     },
@@ -399,33 +465,60 @@ export class Panel {
       const ev = e as TouchEvent<HTMLElement> | MouseEvent<HTMLElement>;
 
       window.requestAnimationFrame(() => {
-        let x = 0;
-        let y = 0;
-    
-        if ("touches" in ev) {
-          x = ev.touches[0].clientX;
-          y = ev.touches[0].clientY;
+        const { size, pointer, position, direction } = this.wrapperResize;
+
+        // 获取偏差值
+        const [x, y] = this.getPointerPosition(ev);
+
+        const offsetX = x - pointer.x;
+        const offsetY = y - pointer.y;
+
+        // 根据触发拖拽位置计算宽高
+        const isPlus = direction.includes("bottom") || direction.includes("right");
+
+        let w;
+        let h;
+
+        if (isPlus) {
+          w = size.width + offsetX;
+          h = size.height + offsetY;
         }
         else {
-          x = ev.clientX;
-          y = ev.clientY;
+          w = size.width - offsetX;
+          h = size.height - offsetY;
         }
 
-        const { translate } = this.state;
-  
-        let w = x - translate.x;
-        let h = y - translate.y;
+        // 检查溢出情况
+        let maxW;
+        let maxH;
 
-        const maxW = window.innerWidth - translate.x;
-        const maxH = window.innerHeight - translate.y;
-  
+        // 拖拽模式，需要判断容器坐标位置
+        if (this.state.draggable) {
+          const { translate } = this.state;
+
+          maxW = window.innerWidth - translate.x;
+          maxH = window.innerHeight - translate.y;
+        }
+        else {
+          maxW = window.innerWidth;
+          maxH = window.innerHeight;
+        }
+
         if (w >= maxW) {
           w = maxW;
         }
         if (h >= maxH) {
           h = maxH;
         }
-    
+
+        // 反转操作，需要修改坐标位置
+        if (this.state.draggable && !isPlus) {
+          const posX = position.x + offsetX;
+          const posY = position.y + offsetY;
+
+          this.setPosition(posX, posY);
+        }
+
         this.setSize(w, h);
       });
     }

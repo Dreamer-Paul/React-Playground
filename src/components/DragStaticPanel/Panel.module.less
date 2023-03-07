@@ -25,19 +25,51 @@
   background-color: #444;
 
   .resizer {
-    :global .resizer-br {
-      right: -.5em;
-      bottom: -.5em;
-      width: 1.5em;
-      height: 1.5em;
+    span {
       position: absolute;
-      cursor: nwse-resize;
       background-color: rgba(0, 0, 0, .5);
     }
-  }
 
-  &:not(:global .draggable) .resizer {
-    display: none;
+    :global .resizer-horizontal {
+      width: 1.5em;
+      top: .5em;
+      bottom: .5em;
+      cursor: ew-resize;
+
+      &.resizer-l {
+        left: -.5em;
+      }
+
+      &.resizer-r {
+        right: -.5em;
+      }
+    }
+
+    :global .resizer-vertical {
+      height: 1.5em;
+      left: .5em;
+      right: .5em;
+      cursor: ns-resize;
+
+      &.resizer-t {
+        top: -.5em;
+      }
+
+      &.resizer-b {
+        bottom: -.5em;
+      }
+    }
+
+    :global .resizer-corner {
+      width: 1.5em;
+      height: 1.5em;
+
+      &.resizer-br {
+        right: -.5em;
+        bottom: -.5em;
+        cursor: nwse-resize;
+      }
+    }
   }
 
   .header {
