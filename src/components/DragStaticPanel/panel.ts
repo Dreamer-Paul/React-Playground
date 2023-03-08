@@ -358,25 +358,59 @@ export class Panel {
       x: -1,
       y: -1,
     },
-    direction: '',
+    direction: [] as (string | undefined)[],
     getDirection: (className: string) => {
+      if (className.includes("-tl")) {
+        return ["top", "left"];
+      }
+      if (className.includes("-tr")) {
+        return ["top", "right"];
+      }
+      if (className.includes("-bl")) {
+        return ["bottom", "left"];
+      }
       if (className.includes("-br")) {
-        return "bottom-right";
-      }
-      if (className.includes("-t")) {
-        return "top";
-      }
-      if (className.includes("-l")) {
-        return "left";
-      }
-      if (className.includes("-r")) {
-        return "right";
-      }
-      if (className.includes("-b")) {
-        return "bottom";
+        return ["bottom", "right"];
       }
 
-      return '';
+      if (className.includes("-t")) {
+        return ["top"];
+      }
+      if (className.includes("-l")) {
+        return [undefined, "left"];
+      }
+      if (className.includes("-b")) {
+        return ["bottom"];
+      }
+      if (className.includes("-r")) {
+        return [undefined, "right"];
+      }
+
+      return [];
+    },
+    checkIsPlus: (direction: (string | undefined)[]) => {
+      if (direction[0] === "top" && direction[1] === "left") {
+        return [false, false];
+      }
+
+      if (direction[0] === undefined && direction[1] === "left") {
+        return [false, false];
+      }
+
+      if (direction[0] === "top" && direction[1] === undefined) {
+        return [false, false];
+      }
+
+      if (direction[0] === "top" && direction[1] === "right") {
+        return [true, false];
+      }
+
+      if (direction[0] === "bottom" && direction[1] === "left") {
+        return [false, true];
+      }
+
+      // direction[0] !== "top", direction[1] !== "left"]
+      return [true, true];
     },
     /**
      * 初始化缩放功能
@@ -392,6 +426,9 @@ export class Panel {
         <span class="resizer-horizontal resizer-l"></span>
         <span class="resizer-vertical resizer-b"></span>
         <span class="resizer-horizontal resizer-r"></span>
+        <span class="resizer-corner resizer-tl"></span>
+        <span class="resizer-corner resizer-tr"></span>
+        <span class="resizer-corner resizer-bl"></span>
         <span class="resizer-corner resizer-br"></span>
       `;
 
@@ -428,31 +465,32 @@ export class Panel {
         return;
       }
 
+      ev.preventDefault();
+
+      const self = this.wrapperResize;
+
       // 拖拽模式使用拖拽的高度
       if (this.state.draggable) {
-        this.wrapperResize.size.height = this.state.size.height;
-        this.wrapperResize.size.width = this.state.size.width;
+        self.size.height = this.state.size.height;
+        self.size.width = this.state.size.width;
 
-        this.wrapperResize.position.x = this.state.translate.x;
-        this.wrapperResize.position.y = this.state.translate.y;
+        self.position.x = this.state.translate.x;
+        self.position.y = this.state.translate.y;
       }
       // 获取实时高度
       else {
-        this.wrapperResize.size.height = this.obj.wrapper.offsetHeight;
-        this.wrapperResize.size.width = this.obj.wrapper.offsetWidth;
+        self.size.height = this.obj.wrapper.offsetHeight;
+        self.size.width = this.obj.wrapper.offsetWidth;
       }
 
       // 记录操作位置
       const target = ev.target as HTMLElement;
-      this.wrapperResize.direction = this.wrapperResize.getDirection(target.className);
+      self.direction = self.getDirection(target.className);
 
       // 记录按下前鼠标指针的位置
-      let [x, y] = this.getPointerPosition(ev);
-
-      this.wrapperResize.pointer.x = x;
-      this.wrapperResize.pointer.y = y;
-
-      ev.preventDefault();
+      const [x, y] = this.getPointerPosition(ev);
+      self.pointer.x = x;
+      self.pointer.y = y;
 
       document.addEventListener(eventName.up, this.wrapperResize.onUp);
       document.addEventListener(eventName.move, this.wrapperResize.onMove);
@@ -465,28 +503,18 @@ export class Panel {
       const ev = e as TouchEvent<HTMLElement> | MouseEvent<HTMLElement>;
 
       window.requestAnimationFrame(() => {
-        const { size, pointer, position, direction } = this.wrapperResize;
+        const { size, pointer, position, direction, checkIsPlus } = this.wrapperResize;
 
         // 获取偏差值
         const [x, y] = this.getPointerPosition(ev);
 
-        const offsetX = x - pointer.x;
-        const offsetY = y - pointer.y;
+        const offsetX = direction[0] && !direction[1] ? 0 : x - pointer.x;
+        const offsetY = direction[1] && !direction[0] ? 0 : y - pointer.y;
 
         // 根据触发拖拽位置计算宽高
-        const isPlus = direction.includes("bottom") || direction.includes("right");
-
-        let w;
-        let h;
-
-        if (isPlus) {
-          w = size.width + offsetX;
-          h = size.height + offsetY;
-        }
-        else {
-          w = size.width - offsetX;
-          h = size.height - offsetY;
-        }
+        const isPlus = checkIsPlus(direction);
+        let w = isPlus[0] ? size.width + offsetX : size.width - offsetX;
+        let h = isPlus[1] ? size.height + offsetY : size.height - offsetY;
 
         // 检查溢出情况
         let maxW;
@@ -512,9 +540,9 @@ export class Panel {
         }
 
         // 反转操作，需要修改坐标位置
-        if (this.state.draggable && !isPlus) {
-          const posX = position.x + offsetX;
-          const posY = position.y + offsetY;
+        if (this.state.draggable) {
+          const posX = position.x + (isPlus[0] ? 0 : offsetX);
+          const posY = position.y + (isPlus[1] ? 0 : offsetY);
 
           this.setPosition(posX, posY);
         }

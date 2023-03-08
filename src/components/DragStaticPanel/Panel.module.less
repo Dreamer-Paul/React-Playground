@@ -64,10 +64,25 @@
       width: 1.5em;
       height: 1.5em;
 
-      &.resizer-br {
-        right: -.5em;
-        bottom: -.5em;
+      &.resizer-tr, &.resizer-bl {
+        cursor: nesw-resize;
+      }
+      &.resizer-tl, &.resizer-br {
         cursor: nwse-resize;
+      }
+
+      &.resizer-tl, &.resizer-bl {
+        left: -.5em;
+      }
+      &.resizer-tr, &.resizer-br {
+        right: -.5em;
+      }
+
+      &.resizer-tl, &.resizer-tr {
+        top: -.5em;
+      }
+      &.resizer-bl, &.resizer-br {
+        bottom: -.5em;
       }
     }
   }
