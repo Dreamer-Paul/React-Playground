@@ -3,10 +3,11 @@ import { Panel as DragStaticPanel } from "./panel";
 import styles from "./Panel.module.less";
 
 interface PanelProps {
+  hidden: boolean;
   children: React.ReactNode;
 }
 
-function Panel({ children }: PanelProps) {
+function Panel({ hidden, children }: PanelProps) {
   const panelRef = useRef<DragStaticPanel>();
   const overlayRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -22,6 +23,11 @@ function Panel({ children }: PanelProps) {
       overlay: overlayRef.current,
       resizer: {
         el: resizerRef.current,
+      },
+      canDrag: (target) => {
+        if (target.className === styles.header) {
+          return true;
+        }
       }
     });
 
@@ -35,7 +41,7 @@ function Panel({ children }: PanelProps) {
   }
 
   return (
-    <div>
+    <div hidden={hidden}>
       <div ref={overlayRef} className={styles.overlay}></div>
       <div ref={wrapperRef} className={styles.panel}>
         <div ref={resizerRef} className={styles.resizer}></div>

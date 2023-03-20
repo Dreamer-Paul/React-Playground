@@ -14,6 +14,7 @@ interface IProps {
   resizer?: {
     el: HTMLElement
   }
+  canDrag?: (target: HTMLElement) => boolean | undefined;
 }
 
 interface IObj {
@@ -49,13 +50,19 @@ export class Panel {
     }
   }
 
-  constructor({ wrapper, overlay, resizer }: IProps) {
+  private canDrag;
+
+  constructor({ wrapper, overlay, resizer, canDrag }: IProps) {
     this.obj.wrapper = wrapper;
     this.obj.overlay = overlay;
 
     if (resizer) {
       this.obj.resizer = resizer.el;
       this.state.resizeable = true;
+    }
+
+    if (canDrag) {
+      this.canDrag = canDrag;
     }
 
     this.wrapperMove.init();
@@ -266,7 +273,16 @@ export class Panel {
 
       if (!this.state.draggable) return;
 
-      if (ev.target !== wrapper) return;
+      // 选中元素不符合验证要求
+      if (this.canDrag) {
+        if (!this.canDrag(ev.target as HTMLElement)) {
+          return;
+        }
+      }
+      // 也不是父元素本体
+      else if (ev.target !== wrapper) {
+        return;
+      }
 
       ev.preventDefault();
 
