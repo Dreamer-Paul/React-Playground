@@ -467,6 +467,12 @@ export class Panel {
      * @description 释放事件
      */
     onUp: () => {
+      const { overlay } = this.obj;
+
+      if (!overlay) return;
+
+      overlay.classList.remove("active");
+
       document.removeEventListener(eventName.up, this.wrapperResize.onUp);
       document.removeEventListener(eventName.move, this.wrapperResize.onMove);
     },
@@ -477,11 +483,16 @@ export class Panel {
     onDown: (e: unknown) => {
       const ev = e as TouchEvent<HTMLElement> | MouseEvent<HTMLElement>;
 
-      if (!this.obj.wrapper) {
+      const { wrapper, overlay } = this.obj;
+
+      if (!wrapper || !overlay) {
         return;
       }
 
+      ev.stopPropagation();
       ev.preventDefault();
+
+      overlay.classList.add("active");
 
       const self = this.wrapperResize;
 
