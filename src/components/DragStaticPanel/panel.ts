@@ -8,11 +8,17 @@ export const eventName = {
   move: isMobile ? "touchmove" : "mousemove"
 };
 
+interface ISize {
+  width?: number
+  height?: number
+}
+
 interface IProps {
   wrapper: HTMLElement
   overlay: HTMLElement
   resizer?: {
     el: HTMLElement
+    minSize?: ISize
   }
   canDrag?: (target: HTMLElement) => boolean | undefined;
 }
@@ -59,6 +65,13 @@ export class Panel {
     if (resizer) {
       this.obj.resizer = resizer.el;
       this.state.resizeable = true;
+
+      if (resizer.minSize) {
+        this.wrapperResize.minSize = {
+          ...this.wrapperResize.minSize,
+          ...resizer.minSize
+        };
+      }
     }
 
     if (canDrag) {
@@ -359,14 +372,20 @@ export class Panel {
   }
 
   //
-  // 拖拽功能（暂时只有右下角）
+  // 拖拽功能
   //
   private wrapperResize = {
-    size: {
-      height: 0,
+    // 最小尺寸
+    minSize: {
       width: 0,
+      height: 0,
     },
-    position: {
+    // 按下前的尺寸和坐标
+    prevSize: {
+      width: 0,
+      height: 0,
+    },
+    prevPosition: {
       x: -1,
       y: -1,
     },
@@ -498,16 +517,16 @@ export class Panel {
 
       // 拖拽模式使用拖拽的高度
       if (this.state.draggable) {
-        self.size.height = this.state.size.height;
-        self.size.width = this.state.size.width;
+        self.prevSize.height = this.state.size.height;
+        self.prevSize.width = this.state.size.width;
 
-        self.position.x = this.state.translate.x;
-        self.position.y = this.state.translate.y;
+        self.prevPosition.x = this.state.translate.x;
+        self.prevPosition.y = this.state.translate.y;
       }
       // 获取实时高度
       else {
-        self.size.height = this.obj.wrapper.offsetHeight;
-        self.size.width = this.obj.wrapper.offsetWidth;
+        self.prevSize.height = wrapper.offsetHeight;
+        self.prevSize.width = wrapper.offsetWidth;
       }
 
       // 记录操作位置
@@ -530,7 +549,7 @@ export class Panel {
       const ev = e as TouchEvent<HTMLElement> | MouseEvent<HTMLElement>;
 
       window.requestAnimationFrame(() => {
-        const { size, pointer, position, direction, checkIsPlus } = this.wrapperResize;
+        const { prevSize, pointer, prevPosition, direction, checkIsPlus, minSize } = this.wrapperResize;
 
         // 获取偏差值
         const [x, y] = this.getPointerPosition(ev);
@@ -540,10 +559,13 @@ export class Panel {
 
         // 根据触发拖拽位置计算宽高
         const isPlus = checkIsPlus(direction);
-        let w = isPlus[0] ? size.width + offsetX : size.width - offsetX;
-        let h = isPlus[1] ? size.height + offsetY : size.height - offsetY;
+        let w = isPlus[0] ? prevSize.width + offsetX : prevSize.width - offsetX;
+        let h = isPlus[1] ? prevSize.height + offsetY : prevSize.height - offsetY;
 
         // 检查溢出情况
+        let minW = minSize.width;
+        let minH = minSize.height;
+
         let maxW;
         let maxH;
 
@@ -551,25 +573,65 @@ export class Panel {
         if (this.state.draggable) {
           const { translate } = this.state;
 
-          maxW = window.innerWidth - translate.x;
-          maxH = window.innerHeight - translate.y;
+          // 非反转模式检查屏幕宽度
+          if (isPlus[0]) {
+            maxW = window.innerWidth - translate.x;
+          }
+          // 反转模式的宽度不能比之前的大
+          else {
+            maxW = prevPosition.x + prevSize.width;
+          }
+
+          if (isPlus[1]) {
+            maxH = window.innerHeight - translate.y;
+          }
+          else {
+            maxH = prevPosition.y + prevSize.height;
+          }
         }
         else {
           maxW = window.innerWidth;
           maxH = window.innerHeight;
         }
 
-        if (w >= maxW) {
+        if (w <= minW) {
+          w = minW;
+        }
+        else if (w >= maxW) {
           w = maxW;
         }
-        if (h >= maxH) {
+
+        if (h <= minH) {
+          h = minH;
+        }
+        else if (h >= maxH) {
           h = maxH;
         }
 
         // 反转操作，需要修改坐标位置
         if (this.state.draggable) {
-          const posX = position.x + (isPlus[0] ? 0 : offsetX);
-          const posY = position.y + (isPlus[1] ? 0 : offsetY);
+          let posX = prevPosition.x + (isPlus[0] ? 0 : offsetX);
+          let posY = prevPosition.y + (isPlus[1] ? 0 : offsetY);
+
+          const maxPosX = prevPosition.x + prevSize.width - minW;
+          const maxPosY = prevPosition.y + prevSize.height - minH;
+
+          // 最小坐标
+          if (posX < 0) {
+            posX = 0;
+          }
+          if (posY < 0) {
+            posY = 0;
+          }
+
+          // 最大坐标（必须是反转模式才能用）
+          if (w === minW && !isPlus[0]) {
+            posX = maxPosX;
+          }
+
+          if (h === minH && !isPlus[1]) {
+            posY = maxPosY;
+          }
 
           this.setPosition(posX, posY);
         }

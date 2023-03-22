@@ -1,9 +1,9 @@
-import { useLayoutEffect, useRef } from "react";
+import { CSSProperties, useLayoutEffect, useRef } from "react";
 import { Panel as DragStaticPanel } from "./panel";
 import styles from "./Panel.module.less";
 
 interface PanelProps {
-  hidden: boolean;
+  hidden?: boolean;
   children: React.ReactNode;
 }
 
@@ -23,6 +23,10 @@ function Panel({ hidden, children }: PanelProps) {
       overlay: overlayRef.current,
       resizer: {
         el: resizerRef.current,
+        minSize: {
+          width: 400,
+          height: 400,
+        },
       },
       canDrag: (target) => {
         if (target.className === styles.header) {
