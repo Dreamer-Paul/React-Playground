@@ -24,16 +24,11 @@ function Panel({ hidden, children }: PanelProps) {
       resizer: {
         el: resizerRef.current,
         minSize: {
-          width: 400,
+          width: 350,
           height: 400,
         },
       },
-      canDrag: (target) => {
-        return true;
-        if (target.className === styles.header) {
-          return true;
-        }
-      }
+      canDrag: (target) => true
     });
 
     return () => {
@@ -42,7 +37,24 @@ function Panel({ hidden, children }: PanelProps) {
   }, []);
 
   const onToggle = () => {
-    panelRef.current?.toggle({}, true);
+    panelRef.current?.toggle({
+      // 绝对设置
+      position: {
+        x: 100,
+        y: 200,
+      },
+      size: {
+        width: 350,
+        height: 500,
+      },
+      // 如果上述任一值没写，会使用切换前的设置，并计算偏差
+      offset: {
+        x: 100,
+        y: 100,
+      },
+      // 是否使用记忆位置
+      usingPrevSets: true
+    });
   }
 
   return (
