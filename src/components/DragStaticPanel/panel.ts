@@ -119,7 +119,7 @@ export class Panel {
   }
 
   // 静态转拖拽
-  public staticToFixed = (offsetProps = {}, usingPrevSets: boolean = false) => {
+  public staticToFixed = (offsetProps = {}, usingPrevSets = false) => {
     if (!this.obj.wrapper) return;
 
     this.state.draggable = true;
@@ -144,8 +144,10 @@ export class Panel {
       const h = wrapper.clientHeight + offset.height;
       this.setSize(w, h);
 
-      const x = wrapper.offsetLeft + offset.x;
-      const y = wrapper.offsetTop + offset.y;
+      const { top, left } = wrapper.getBoundingClientRect();
+
+      const x = left + offset.x;
+      const y = top + offset.y;
       this.setPosition(x, y);
     }
 
