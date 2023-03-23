@@ -29,6 +29,7 @@ function Panel({ hidden, children }: PanelProps) {
         },
       },
       canDrag: (target) => {
+        return true;
         if (target.className === styles.header) {
           return true;
         }

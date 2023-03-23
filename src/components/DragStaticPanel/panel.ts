@@ -8,9 +8,14 @@ export const eventName = {
   move: isMobile ? "touchmove" : "mousemove"
 };
 
+interface IPosition {
+  x: number
+  y: number
+}
+
 interface ISize {
-  width?: number
-  height?: number
+  width: number
+  height: number
 }
 
 interface IProps {
@@ -18,9 +23,16 @@ interface IProps {
   overlay: HTMLElement
   resizer?: {
     el: HTMLElement
-    minSize?: ISize
+    minSize?: Partial<ISize>
   }
   canDrag?: (target: HTMLElement) => boolean | undefined;
+}
+
+export interface IToggleProps {
+  size?: Partial<ISize>
+  position?: Partial<IPosition>
+  offset?: Partial<ISize & IPosition>
+  usingPrevSets?: boolean
 }
 
 interface IObj {
@@ -119,7 +131,7 @@ export class Panel {
   }
 
   // 静态转拖拽
-  public staticToFixed = (offsetProps = {}, usingPrevSets = false) => {
+  public staticToFixed = (props: IToggleProps) => {
     if (!this.obj.wrapper) return;
 
     this.state.draggable = true;
@@ -129,25 +141,25 @@ export class Panel {
       y: 0,
       width: 0,
       height: 0,
-      ...offsetProps
+      ...props.offset
     };
 
     const { wrapper } = this.obj;
     const { size, translate } = this.state;
 
     // 如果需要还原成之前的坐标和位置
-    if (usingPrevSets && (size.width > -1 || size.width > -1) && (translate.x > -1 || translate.y > -1)) {
+    if (props.usingPrevSets && (size.width > -1 || size.width > -1) && (translate.x > -1 || translate.y > -1)) {
       this.fixPositionAndSize();
     }
     else {
-      const w = wrapper.clientWidth + offset.width;
-      const h = wrapper.clientHeight + offset.height;
+      const w = props.size?.width || wrapper.clientWidth + offset.width;
+      const h = props.size?.height || wrapper.clientHeight + offset.height;
       this.setSize(w, h);
 
       const { top, left } = wrapper.getBoundingClientRect();
 
-      const x = left + offset.x;
-      const y = top + offset.y;
+      const x = props.position?.x || left + offset.x;
+      const y = props.position?.y || top + offset.y;
       this.setPosition(x, y);
     }
 
@@ -177,12 +189,12 @@ export class Panel {
   }
 
   // 自动切换
-  public toggle = (offsetProps = {}, usingPrevSets?: boolean) => {
+  public toggle = (props: IToggleProps) => {
     if (this.state.draggable) {
       this.fixedToStatic();
     }
     else {
-      this.staticToFixed(offsetProps, usingPrevSets);
+      this.staticToFixed(props);
     }
   }
 
