@@ -1,4 +1,4 @@
-import { CSSProperties, useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { Panel as DragStaticPanel } from "./panel";
 import styles from "./Panel.module.less";
 

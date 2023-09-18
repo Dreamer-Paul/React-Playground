@@ -148,7 +148,7 @@ export class Panel {
     const { size, translate } = this.state;
 
     // 如果需要还原成之前的坐标和位置
-    if (props.usingPrevSets && (size.width > -1 || size.width > -1) && (translate.x > -1 || translate.y > -1)) {
+    if (props.usingPrevSets && (size.width > -1 || size.height > -1) && (translate.x > -1 || translate.y > -1)) {
       this.fixPositionAndSize();
     }
     else {
@@ -337,6 +337,8 @@ export class Panel {
       if (!wrapper) return;
 
       window.requestAnimationFrame(() => {
+        if (!this.state.draggable) return;
+
         // 移动的时候拿到的坐标是鼠标的（较大）减去按下前鼠标距离元素 xy 的距离
         let [x, y] = this.getPointerPosition(ev);
 
