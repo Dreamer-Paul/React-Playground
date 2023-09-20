@@ -1,4 +1,4 @@
-import { MouseEvent, TouchEvent } from "react";
+import type { MouseEvent, TouchEvent } from "react";
 
 export const isMobile = navigator.userAgent.toLocaleLowerCase().includes("mobi");
 
@@ -25,6 +25,7 @@ interface IProps {
     el: HTMLElement
     minSize?: Partial<ISize>
   }
+  events?: IEvents;
   canDrag?: (target: HTMLElement) => boolean | undefined;
 }
 
@@ -41,12 +42,19 @@ interface IObj {
   resizer?: HTMLElement
 }
 
+interface IEvents {
+  onMoveEnd?: () => void;
+  onResizeEnd?: () => void;
+}
+
 export class Panel {
   private obj: IObj = {
     wrapper: undefined,
     overlay: undefined,
     resizer: undefined,
   }
+
+  private events: IEvents = {}
 
   private state = {
     draggable: false,
@@ -70,9 +78,10 @@ export class Panel {
 
   private canDrag;
 
-  constructor({ wrapper, overlay, resizer, canDrag }: IProps) {
+  constructor({ wrapper, overlay, resizer, events, canDrag }: IProps) {
     this.obj.wrapper = wrapper;
     this.obj.overlay = overlay;
+    this.events = events || {};
 
     if (resizer) {
       this.obj.resizer = resizer.el;
@@ -99,6 +108,11 @@ export class Panel {
     this.wrapperMove.init();
     this.wrapperResize.destroy();
     this.windowResizeCheck.destroy();
+  }
+
+  // 获取坐标和大小
+  public get positionAndSize() {
+    return { ...this.state.translate, ...this.state.size };
   }
 
   // 修改容器坐标
@@ -148,10 +162,7 @@ export class Panel {
     const { size, translate } = this.state;
 
     // 如果需要还原成之前的坐标和位置
-    if (props.usingPrevSets && (size.width > -1 || size.height > -1) && (translate.x > -1 || translate.y > -1)) {
-      this.fixPositionAndSize();
-    }
-    else {
+    if (!(props.usingPrevSets && (size.width > -1 || size.height > -1) && (translate.x > -1 || translate.y > -1))) {
       const w = props.size?.width || wrapper.clientWidth + offset.width;
       const h = props.size?.height || wrapper.clientHeight + offset.height;
       this.setSize(w, h);
@@ -163,6 +174,8 @@ export class Panel {
       this.setPosition(x, y);
     }
 
+    this.fixPositionAndSize();
+    
     wrapper.classList.add("draggable");
 
     wrapper.style.top = "0";
@@ -286,6 +299,8 @@ export class Panel {
 
       document.removeEventListener(eventName.move, this.wrapperMove.onMove);
       document.removeEventListener(eventName.up, this.wrapperMove.onUp);
+
+      this.events.onMoveEnd?.();
     },
     /**
      * 鼠标按下
@@ -510,6 +525,8 @@ export class Panel {
 
       document.removeEventListener(eventName.up, this.wrapperResize.onUp);
       document.removeEventListener(eventName.move, this.wrapperResize.onMove);
+
+      this.events.onResizeEnd?.();
     },
     /**
      * 鼠标按下
