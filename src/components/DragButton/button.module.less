@@ -1,0 +1,37 @@
+.overlay {
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  display: none;
+  position: fixed;
+
+  &:global(.active) {
+    display: block;
+  }
+}
+
+.panel {
+  top: 0;
+  right: 0;
+  width: 4em;
+  height: 2.5em;
+  z-index: 1;
+  display: flex;
+  cursor: pointer;
+  position: fixed;
+  padding: 0 .75em;
+  color: #2290e7;
+  border-radius: 1em;
+  box-sizing: border-box;
+  border: 1px solid white;
+  background-color: #eaf4fd;
+  border-radius: 40px 0 0 40px;
+  box-shadow: 0px 2px 8px rgba(144, 144, 144, .2);
+
+  &:hover {
+    color: #fff;
+    background-color: #2290e7;
+  }
+}
