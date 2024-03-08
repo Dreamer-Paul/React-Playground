@@ -105,7 +105,7 @@ export class Panel {
   }
 
   public destroy = () => {
-    this.wrapperMove.init();
+    this.wrapperMove.destroy();
     this.wrapperResize.destroy();
     this.windowResizeCheck.destroy();
   }
@@ -169,13 +169,13 @@ export class Panel {
 
       const { top, left } = wrapper.getBoundingClientRect();
 
-      const x = props.position?.x || left + offset.x;
-      const y = props.position?.y || top + offset.y;
+      const x = props.position?.x ?? left + offset.x;
+      const y = props.position?.y ?? top + offset.y;
       this.setPosition(x, y);
     }
 
     this.fixPositionAndSize();
-    
+
     wrapper.classList.add("draggable");
 
     wrapper.style.top = "0";
@@ -262,7 +262,7 @@ export class Panel {
   }
 
   //
-  // 绑定 Wrapper 操作
+  // 拖拽功能
   //
   private wrapperMove = {
     /**
@@ -283,7 +283,7 @@ export class Panel {
 
       if (!wrapper || !overlay) return;
 
-      wrapper.addEventListener(eventName.down, this.wrapperMove.onDown);
+      wrapper.removeEventListener(eventName.down, this.wrapperMove.onDown);
     },
     /**
      * 鼠标弹起
@@ -403,7 +403,7 @@ export class Panel {
   }
 
   //
-  // 拖拽功能
+  // 拖拽缩放功能
   //
   private wrapperResize = {
     // 最小尺寸
