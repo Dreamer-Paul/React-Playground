@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import reactLogo from "@/assets/react.svg";
 import styles from "./Home.module.less";
 
-function Index() {
+function PageHome() {
   return (
     <div className={styles.index}>
       <div>
@@ -16,9 +16,10 @@ function Index() {
       <h1>Paul's React Playground</h1>
       <div className={styles.list}>
         <Link to="/drag-static-panel">拖拽静态轮换面板</Link>
+        <Link to="/drag-button">靠右拖拽按钮</Link>
       </div>
     </div>
   );
 }
 
-export default Index;
+export default PageHome;

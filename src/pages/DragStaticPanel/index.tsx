@@ -1,6 +1,6 @@
 import Panel from "@/components/DragStaticPanel";
 
-function DragStaticPanel() {
+function PageDragStaticPanel() {
   return (
     <div>
       <h1>拖拽静态轮换面板</h1>
@@ -12,4 +12,4 @@ function DragStaticPanel() {
   );
 }
 
-export default DragStaticPanel;
+export default PageDragStaticPanel;
